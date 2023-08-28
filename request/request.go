@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"time"
@@ -24,7 +25,11 @@ func NewRequest(size int64, u string, delay time.Duration) *request {
 	req.ProtoMinor = 1
 	req.TransferEncoding = []string{"chunked"}
 	req.Header = make(map[string][]string)
-
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19")
+	//req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	ran := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := ran.Intn(1000) + 100
+	req.Header.Set("Cookie", fmt.Sprintf("rand=%d", r))
 	return &request{
 		client:      http.DefaultClient,
 		delay:       delay,
