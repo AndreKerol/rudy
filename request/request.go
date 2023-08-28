@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -32,11 +33,23 @@ func NewRequest(size int64, u string, delay time.Duration) *request {
 	req.Header = make(map[string][]string)
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19")
 	//req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	req.AddCookie(&http.Cookie{
+		Name:   "rand",
+		Value:  fmt.Sprintf("%d", rand.Intn(10000)+1),
+		MaxAge: 300,
+	})
+
+	client := http.DefaultClient
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
 	ran := rand.New(rand.NewSource(time.Now().UnixNano()))
 	r := ran.Intn(1000) + 100
 	req.Header.Set("Cookie", fmt.Sprintf("rand=%d", r))
 	return &request{
-		client:      http.DefaultClient,
+		client:      client,
 		delay:       delay,
 		payloadSize: size,
 		req:         req,
@@ -50,6 +63,7 @@ func (r *request) WithTor(endpoint string) *request {
 	}
 
 	var transport http.Transport
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	transport.Proxy = http.ProxyURL(torProxy)
 	r.client.Transport = &transport
 
@@ -78,7 +92,10 @@ func (r *request) Send() error {
 					break
 				}
 
-				_, _ = pipeWriter.Write(buf)
+				_, err := pipeWriter.Write(buf)
+				if err != nil {
+					log.Println(err)
+				}
 
 				logger.Logger.Sugar().Infof("Sent 1 byte of %d to %s", r.payloadSize, r.req.URL)
 				time.Sleep(r.delay)
