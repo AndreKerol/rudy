@@ -2,6 +2,7 @@ package request
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"math/rand"
@@ -17,6 +18,10 @@ type request struct {
 	delay       time.Duration
 	payloadSize int64
 	req         *http.Request
+}
+
+func init() {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 }
 
 func NewRequest(size int64, u string, delay time.Duration) *request {
